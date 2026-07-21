@@ -108,8 +108,13 @@ class JudgeServer:
                 exe_path = os.path.join(submission_dir, run_config["exe_name"])
                 with open(exe_path, "w", encoding="utf-8") as f:
                     f.write(src)
+                os.chown(exe_path, RUN_USER_UID, RUN_GROUP_GID)
+                os.chmod(exe_path, 0o400)
 
             if init_test_case_dir:
+                # Support both dict (keyed by test case number) and list formats
+                if isinstance(test_case, dict):
+                    test_case = list(test_case.values())
                 info = {"test_case_number": len(test_case), "spj": is_spj, "test_cases": {}}
                 # write test case
                 for index, item in enumerate(test_case):

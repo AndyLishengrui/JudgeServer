@@ -1,4 +1,4 @@
-FROM debian:trixie-slim AS builder
+FROM docker.1ms.run/library/ubuntu:24.04 AS builder
 ARG TARGETARCH
 ARG TARGETVARIANT
 
@@ -33,7 +33,7 @@ python3 -m venv .venv
 .venv/bin/python3 -m build -w
 EOS
 
-FROM debian:trixie-slim
+FROM docker.1ms.run/library/ubuntu:24.04
 ARG TARGETARCH
 ARG TARGETVARIANT
 
@@ -48,43 +48,20 @@ rm -f /etc/apt/apt.conf.d/docker-clean
 echo 'Binary::apt::APT::Keep-Downloaded-Packages "1";' > /etc/apt/apt.conf.d/keep-cache
 echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/no-recommends
 echo 'APT::AutoRemove::RecommendsImportant "0";' >> /etc/apt/apt.conf.d/no-recommends
-needed="python3.12-minimal \
-    python3.12-venv \
-    libpython3.12-stdlib \
-    libpython3.12-dev \
-    golang-1.22-go \
-    temurin-21-jdk \
+needed="python3 \
+    python3-venv \
+    python3-dev \
+    openjdk-21-jdk \
     gcc-13 \
     g++-13 \
-    nodejs \
     strace"
 savedAptMark="$(apt-mark showmanual) $needed"
 apt-get update
-apt-get install -y ca-certificates curl gnupg
-curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor -o /etc/apt/keyrings/adoptium.gpg
-cat > /etc/apt/sources.list.d/adoptium.sources <<EOF
-Types: deb
-URIs: https://packages.adoptium.net/artifactory/deb
-Suites: bookworm
-Components: main
-Signed-By: /etc/apt/keyrings/adoptium.gpg
-EOF
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-cat > /etc/apt/sources.list.d/nodesource.sources <<EOF
-Types: deb
-URIs: https://deb.nodesource.com/node_20.x
-Suites: nodistro
-Components: main
-Signed-By:/etc/apt/keyrings/nodesource.gpg
-EOF
-apt-get update
-apt-get install -y $needed
+apt-get install -y ca-certificates $needed
 update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 13
 update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 13
-update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 12
-update-alternatives --install /usr/bin/go go /usr/lib/go-1.22/bin/go 22
-rm -rf /usr/lib/jvm/temurin-21-jdk-*/jmods
-rm -rf /usr/lib/jvm/temurin-21-jdk-*/lib/src.zip
+rm -rf /usr/lib/jvm/java-21-openjdk-*/jmods
+rm -rf /usr/lib/jvm/java-21-openjdk-*/lib/src.zip
 apt-mark auto '.*' > /dev/null
 apt-mark manual $savedAptMark
 apt-get purge -y --auto-remove
@@ -118,7 +95,6 @@ gcc --version
 g++ --version
 python3 --version
 java -version
-node --version
 EOS
 
 HEALTHCHECK --interval=5s CMD [ "/app/.venv/bin/python3", "/app/service.py" ]
